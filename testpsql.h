@@ -7,11 +7,15 @@
 #include <sys/time.h>
 #include <libpq-fe.h>
 
-#define CONNINFO "dbname = test host = localhost port = 5432 user = skline"
+#define CONNINFO "dbname = postgres host = localhost port = 5432 user = skline"
+#define BUFFER_SIZE 1024
 
 extern PGconn * dbconn;
 
-static void exit_clean(PGconn *conn);
+static void exit_clean(PGconn *dbconn);
 PGconn *connect_database();
+void create_person_table(PGconn *dbconn);
+void insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth);
+void show_person_table(PGconn *dbconn);
 
 #endif /* _TESTPSQL_H */
