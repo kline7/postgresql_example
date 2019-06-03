@@ -1,6 +1,6 @@
-/* Spencer Kline
+/* Spencer Kline 06/03/2019
  * This is a simple program to connect to a DB,
- * Insert some data, query some data, update some data? and remove some data
+ * Insert some data, query some data, update some data, and remove some data, drop a table, show data in the table,
  * and disconnect from the DB
  */
 #include "testpsql.h"
