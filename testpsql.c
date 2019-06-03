@@ -136,6 +136,24 @@ void delete_person_byId(PGconn *dbconn, int id){
   return;
 }
 
+void drop_person_table(PGconn *dbconn){
+  PGresult * response = NULL;
+
+  response = PQexec(dbconn, "DROP TABLE person");
+
+  if(PQresultStatus(response) != PGRES_COMMAND_OK){
+    fprintf(stderr, "ERROR: DROP TABLE person command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    exit(-1);
+  }else{
+    printf("\n person table DELETED.\n");
+  }
+
+  PQclear(response);  
+  return;
+}
+
 int main(){
   printf("\nConnecting to db...\n");
   connect_database();
