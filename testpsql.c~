@@ -1,0 +1,32 @@
+/* Spencer Kline
+ * This is a simple program to connect to a DB,
+ * Insert some data, query some data, update some data? and remove some data
+ * and disconnect from the DB
+ */
+#include "testpsql.h"
+
+PGconn * dbconn = NULL;
+
+static void exit_clean(PGconn * dbconn){
+  PQfinish(dbconn);
+}
+
+PGconn *connect_database(){
+  dbconn = PQconnectdb(CONNINFO);
+  
+  if(PQstatus(dbconn) != CONNECTION_OK){
+    perror("connect db failed %s\n", PQerrorMessage(dbconn));
+    exit_clean(dbconn);
+    exit(-1);
+  }else{
+    printf("\nSucc Connect\n");
+  }
+  
+  return dbconn;
+}
+
+int main(){
+  printf("\nConnecting to db...\n");
+  connect_database();
+  return 0;
+}
