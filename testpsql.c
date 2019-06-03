@@ -48,8 +48,7 @@ void insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth
   int buffer_len = snprintf(buffer, sizeof(buffer), "INSERT INTO person( first_name, date_of_birth) VALUES(%s, %s);", PQescapeLiteral(dbconn, first_name, (size_t)strlen(first_name)), PQescapeLiteral(dbconn, date_of_birth, (size_t)strlen(date_of_birth)));
 
   if(buffer_len > BUFFER_SIZE){
-    fprintf(stderr, "ERROR: buffer_size is too small.\n");
-    free(buffer);
+    fprintf(stderr, "ERROR: buffer_size is too small for insert.\n");
     exit(-2);
   }
 
@@ -72,7 +71,68 @@ void insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth
 
 void show_person_table(PGconn *dbconn){
   PGresult * response = NULL;
+  int nFields, nRows;
+  response = PQexec(dbconn, "SELECT * FROM person;");
 
+  if(PQresultStatus(response) != PGRES_TUPLES_OK){
+    fprintf(stderr, "ERROR: show person command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    exit(-1);    
+  }
+
+  nFields = PQnfields(response);
+  nRows = PQntuples(response);
+
+  if(nFields < 0 || nRows < 0){
+    fprintf(stderr, "ERROR: show person command failed no rows or fields.\n");
+    PQclear(response);
+  }
+
+  printf("\n \t\tperson table\n\n");
+
+  for(int i = 0; i < nFields; i++){
+    printf("%-15s", PQfname(response, i));
+  }
+  printf("\n\n");
+  for(int r =0; r < nRows; r++){
+    for(int f = 0; f < nFields; f++){
+      printf("%-15s", PQgetvalue(response, r, f));
+    }
+    printf("\n");
+  }
+  PQclear(response);
+  return;
+}
+
+void delete_person_in_table(PGconn *dbconn, int id){
+  PGresult * response = NULL;
+  char buffer[BUFFER_SIZE];
+  int buffer_len;
+  
+  if(id < 0 || id > INT32_MAX ){
+    fprintf(stderr, "ERROR: id given is not within range.\n");
+    return;
+  }
+
+  buffer_len = snprintf(buffer, sizeof(buffer), "DELETE FROM person WHERE id = %u;", id);
+  if(buffer_len > BUFFER_SIZE){
+    fprintf(stderr, "ERROR: buffer_size is too small for delete.\n");
+    exit(-2);
+  }
+
+  response = PQexec(dbconn, buffer);
+
+  if(PQresultStatus(response) != PGRES_COMMAND_OK){
+    fprintf(stderr, "ERROR: DELETE FROM person command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    exit(-1);
+  }else{
+    printf("\n person %u DELETED. \n", id);
+  }
+
+  PQclear(response);  
   return;
 }
 
@@ -81,6 +141,9 @@ int main(){
   connect_database();
   create_person_table(dbconn);
   insert_person_table(dbconn, "Tim Cook", "1965-02-10");
+  show_person_table(dbconn);
+  delete_person_in_table(dbconn, 5);
+  show_person_table(dbconn);
   exit_clean(dbconn);
   return 0;
 }
