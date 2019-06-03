@@ -136,6 +136,40 @@ void delete_person_byId(PGconn *dbconn, int id){
   return;
 }
 
+void alter_person_byId(PGconn *dbconn, int id, char * first_name, char * date_of_birth){
+  PGresult * response = PQexec(dbconn, "SET client_min_messages = error;");
+  char buffer[BUFFER_SIZE];
+  int buffer_len;
+  
+  if(id < 0 || id > INT32_MAX ){
+    fprintf(stderr, "ERROR: id given is not within range.\n");
+    return;
+  }
+
+  if(first_name == NULL){
+    fprintf(stderr, "ERROR: No first name given for update.\n");
+    return;
+  }
+
+  buffer_len = snprintf(buffer, sizeof(buffer), "UPDATE person SET first_name = %s, date_of_birth = %s WHERE id = %u;", PQescapeLiteral(dbconn, first_name, (size_t)strlen(first_name)), PQescapeLiteral(dbconn, date_of_birth, (size_t)strlen(date_of_birth)), id);
+  if(buffer_len > BUFFER_SIZE){
+    fprintf(stderr, "ERROR: buffer_size is too small for alter.\n");
+    exit(-2);
+  }
+
+  response = PQexec(dbconn, buffer);
+
+  if(PQresultStatus(response) != PGRES_COMMAND_OK){
+    fprintf(stderr, "ERROR: alter person by id command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    exit(-1);
+  }else{
+    printf("\n person %u altered. \n", id);
+  }
+  PQclear(response);
+}
+
 void drop_person_table(PGconn *dbconn){
   PGresult * response = NULL;
 
@@ -154,14 +188,60 @@ void drop_person_table(PGconn *dbconn){
   return;
 }
 
+struct person select_person_byId(PGconn *dbconn, int id){
+  PGresult * response = NULL;
+  char buffer[BUFFER_SIZE];
+  int buffer_len;
+  int nFields, nRows;
+  struct person ret;
+  
+  if(id < 0 || id > INT32_MAX ){
+    fprintf(stderr, "ERROR: id given is not within range.\n");
+    ret.first_name[0] = '\0';
+    return ret;
+  }
+
+  buffer_len = snprintf(buffer, sizeof(buffer), "SELECT * FROM person WHERE id = %u;", id);
+  if(buffer_len > BUFFER_SIZE){
+    fprintf(stderr, "ERROR: buffer_size is too small for select by id.\n");
+    exit(-2);
+  }
+
+  response = PQexec(dbconn, buffer);
+
+  if(PQresultStatus(response) != PGRES_TUPLES_OK){
+    fprintf(stderr, "ERROR: show person command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    exit(-1);    
+  }
+
+  nFields = PQnfields(response);
+  nRows = PQntuples(response);
+
+  if(nFields < 0 || nRows < 0){
+    fprintf(stderr, "ERROR: show person command failed no rows or fields.\n");
+    PQclear(response);
+    ret.first_name[0] ='\0';
+    return ret;
+  }
+
+  strcpy(ret.first_name,PQgetvalue(response,0,1));
+  strcpy(ret.date_of_birth,PQgetvalue(response,0,2));
+
+  
+  return ret;
+}
+
 int main(){
+  struct person resp;
   printf("\nConnecting to db...\n");
   connect_database();
   create_person_table(dbconn);
-  insert_person_table(dbconn, "Tim Cook", "1965-02-10");
+  insert_person_table(dbconn, "Jim", "1965-02-10");
   show_person_table(dbconn);
-  delete_person_byId(dbconn, 5);
-  show_person_table(dbconn);
+  resp = select_person_byId(dbconn, 1);
+  printf("Person name: %s d-o-b: %s\n", resp.first_name, resp.date_of_birth);
   exit_clean(dbconn);
   return 0;
 }
