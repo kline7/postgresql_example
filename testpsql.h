@@ -23,6 +23,7 @@ void show_person_table(PGconn *dbconn);
 // alter an existing person in the table by id
 void alter_person_table(PGconn *dbconn, int id, char * first_name, char * date_of_birth);
 // delete an existing person in the table
-void delete_person_in_table(PGconn *dbconn, int id);
+void delete_person_byId(PGconn *dbconn, int id);
+
 
 #endif /* _TESTPSQL_H */

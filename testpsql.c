@@ -105,7 +105,7 @@ void show_person_table(PGconn *dbconn){
   return;
 }
 
-void delete_person_in_table(PGconn *dbconn, int id){
+void delete_person_byId(PGconn *dbconn, int id){
   PGresult * response = NULL;
   char buffer[BUFFER_SIZE];
   int buffer_len;
@@ -142,7 +142,7 @@ int main(){
   create_person_table(dbconn);
   insert_person_table(dbconn, "Tim Cook", "1965-02-10");
   show_person_table(dbconn);
-  delete_person_in_table(dbconn, 5);
+  delete_person_byId(dbconn, 5);
   show_person_table(dbconn);
   exit_clean(dbconn);
   return 0;
