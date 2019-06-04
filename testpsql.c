@@ -25,7 +25,7 @@ PGconn *connect_database(){
   return dbconn;
 }
 
-void create_person_table(PGconn *dbconn){
+int create_person_table(PGconn *dbconn){
   PGresult * response = PQexec(dbconn, "SET client_min_messages = error;");
 
   response = PQexec(dbconn, "CREATE TABLE IF NOT EXISTS person(id BIGSERIAL NOT NULL PRIMARY KEY, first_name VARCHAR(50) NOT NULL, date_of_birth DATE NOT NULL);");
@@ -34,22 +34,22 @@ void create_person_table(PGconn *dbconn){
     fprintf(stderr, "ERROR: CREATE TABLE person failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);
+    return -1;
   }else{
     PQclear(response);
     printf("\nperson table created or exists.\n");
-    return;
+    return 1;
   }
 }
 
-void insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth){
+int insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth){
   PGresult * response = NULL;
   char buffer[BUFFER_SIZE];
   int buffer_len = snprintf(buffer, sizeof(buffer), "INSERT INTO person( first_name, date_of_birth) VALUES(%s, %s);", PQescapeLiteral(dbconn, first_name, (size_t)strlen(first_name)), PQescapeLiteral(dbconn, date_of_birth, (size_t)strlen(date_of_birth)));
 
   if(buffer_len > BUFFER_SIZE){
     fprintf(stderr, "ERROR: buffer_size is too small for insert.\n");
-    exit(-2);
+    return -2;
   }
 
   //Assert that the table exists
@@ -61,15 +61,16 @@ void insert_person_table(PGconn *dbconn, char * first_name, char * date_of_birth
     fprintf(stderr, "ERROR: INSERT INTO person command failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);
+    return -1;
   }else{
     printf("\n person added. \n");
   }
 
   PQclear(response);
+  return 1;
 }
 
-void show_person_table(PGconn *dbconn){
+int show_person_table(PGconn *dbconn){
   PGresult * response = NULL;
   int nFields, nRows;
   response = PQexec(dbconn, "SELECT * FROM person;");
@@ -78,7 +79,7 @@ void show_person_table(PGconn *dbconn){
     fprintf(stderr, "ERROR: show person command failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);    
+    return -1;    
   }
 
   nFields = PQnfields(response);
@@ -87,6 +88,7 @@ void show_person_table(PGconn *dbconn){
   if(nFields < 0 || nRows < 0){
     fprintf(stderr, "ERROR: show person command failed no rows or fields.\n");
     PQclear(response);
+    return -2;
   }
 
   printf("\n \t\tperson table\n\n");
@@ -102,23 +104,23 @@ void show_person_table(PGconn *dbconn){
     printf("\n");
   }
   PQclear(response);
-  return;
+  return 1;
 }
 
-void delete_person_byId(PGconn *dbconn, int id){
+int delete_person_byId(PGconn *dbconn, int id){
   PGresult * response = NULL;
   char buffer[BUFFER_SIZE];
   int buffer_len;
   
   if(id < 0 || id > INT32_MAX ){
     fprintf(stderr, "ERROR: id given is not within range.\n");
-    return;
+    return -2;
   }
 
   buffer_len = snprintf(buffer, sizeof(buffer), "DELETE FROM person WHERE id = %u;", id);
   if(buffer_len > BUFFER_SIZE){
     fprintf(stderr, "ERROR: buffer_size is too small for delete.\n");
-    exit(-2);
+    return -2;
   }
 
   response = PQexec(dbconn, buffer);
@@ -127,34 +129,39 @@ void delete_person_byId(PGconn *dbconn, int id){
     fprintf(stderr, "ERROR: DELETE FROM person command failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);
+    return -1;
   }else{
     printf("\n person %u DELETED. \n", id);
   }
 
   PQclear(response);  
-  return;
+  return 1;
 }
 
-void alter_person_byId(PGconn *dbconn, int id, char * first_name, char * date_of_birth){
+int alter_person_byId(PGconn *dbconn, int id, char * first_name, char * date_of_birth){
   PGresult * response = PQexec(dbconn, "SET client_min_messages = error;");
   char buffer[BUFFER_SIZE];
   int buffer_len;
   
   if(id < 0 || id > INT32_MAX ){
     fprintf(stderr, "ERROR: id given is not within range.\n");
-    return;
+    return -2;
   }
 
   if(first_name == NULL){
     fprintf(stderr, "ERROR: No first name given for update.\n");
-    return;
+    return -2;
+  }
+
+  if(date_of_birth == NULL){
+    fprintf(stderr, "ERROR: No date of birth given for update.\n");
+    return -2;   
   }
 
   buffer_len = snprintf(buffer, sizeof(buffer), "UPDATE person SET first_name = %s, date_of_birth = %s WHERE id = %u;", PQescapeLiteral(dbconn, first_name, (size_t)strlen(first_name)), PQescapeLiteral(dbconn, date_of_birth, (size_t)strlen(date_of_birth)), id);
   if(buffer_len > BUFFER_SIZE){
     fprintf(stderr, "ERROR: buffer_size is too small for alter.\n");
-    exit(-2);
+    return -2;
   }
 
   response = PQexec(dbconn, buffer);
@@ -163,14 +170,15 @@ void alter_person_byId(PGconn *dbconn, int id, char * first_name, char * date_of
     fprintf(stderr, "ERROR: alter person by id command failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);
+    return -1;
   }else{
     printf("\n person %u altered. \n", id);
   }
   PQclear(response);
+  return 1;
 }
 
-void drop_person_table(PGconn *dbconn){
+int drop_person_table(PGconn *dbconn){
   PGresult * response = NULL;
 
   response = PQexec(dbconn, "DROP TABLE person");
@@ -179,13 +187,13 @@ void drop_person_table(PGconn *dbconn){
     fprintf(stderr, "ERROR: DROP TABLE person command failed. %s\n", PQerrorMessage(dbconn));
     PQclear(response);
     exit_clean(dbconn);
-    exit(-1);
+    return -1;
   }else{
     printf("\n person table DELETED.\n");
   }
 
   PQclear(response);  
-  return;
+  return 1;
 }
 
 struct person select_person_byId(PGconn *dbconn, int id){
@@ -229,7 +237,6 @@ struct person select_person_byId(PGconn *dbconn, int id){
   strcpy(ret.first_name,PQgetvalue(response,0,1));
   strcpy(ret.date_of_birth,PQgetvalue(response,0,2));
 
-  
   return ret;
 }
 
