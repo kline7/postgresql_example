@@ -34,6 +34,9 @@ int delete_person_byId(PGconn *dbconn, int id);
 int drop_person_table(PGconn *dbconn);
 // select person by id
 struct person select_person_byId(PGconn *dbconn, int id);
-
+// find and print duplicate rows
+int show_person_dups(PGconn *dbconn);
+// delete all duplicate rows
+int delete_person_dups(PGconn *dbconn);
 
 #endif /* _TESTPSQL_H */

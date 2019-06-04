@@ -240,15 +240,70 @@ struct person select_person_byId(PGconn *dbconn, int id){
   return ret;
 }
 
+int show_person_dups(PGconn *dbconn){
+  PGresult * response = PQexec(dbconn, "SELECT first_name, COUNT( first_name ), date_of_birth, COUNT( date_of_birth ) FROM person GROUP BY first_name, date_of_birth HAVING COUNT( first_name )>1 AND COUNT( date_of_birth )>1 ORDER BY first_name;");
+  int nFields, nRows;
+
+  if(PQresultStatus(response) != PGRES_TUPLES_OK){
+    fprintf(stderr, "ERROR: show person command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    return -1;    
+  }
+
+  nFields = PQnfields(response);
+  nRows = PQntuples(response);
+
+  if(nFields < 0 || nRows < 0){
+    fprintf(stderr, "ERROR: show person command failed no rows or fields.\n");
+    PQclear(response);
+    return -2;
+  }
+
+  printf("\n \t\tperson table\n\n");
+
+  for(int i = 0; i < nFields; i++){
+    printf("%-15s", PQfname(response, i));
+  }
+  printf("\n\n");
+  for(int r =0; r < nRows; r++){
+    for(int f = 0; f < nFields; f++){
+      printf("%-15s", PQgetvalue(response, r, f));
+    }
+    printf("\n");
+  }
+  PQclear(response);
+  return 1;
+}
+
+int delete_person_dups(PGconn *dbconn){
+  PGresult * response = PQexec(dbconn, "DELETE FROM person WHERE id IN (SELECT id FROM (SELECT id, ROW_NUMBER() OVER( PARTITION BY first_name, date_of_birth ORDER BY id ) AS row_num FROM person ) t WHERE t.row_num > 1 );");
+
+  if(PQresultStatus(response) != PGRES_COMMAND_OK){
+    fprintf(stderr, "ERROR: Delete duplicate person's command failed. %s\n", PQerrorMessage(dbconn));
+    PQclear(response);
+    exit_clean(dbconn);
+    return -1;
+  }else{
+    printf("\n person duplicates DELETED.\n");
+  }
+
+  PQclear(response);  
+  return 1;
+}
+
 int main(){
   struct person resp;
   printf("\nConnecting to db...\n");
   connect_database();
   create_person_table(dbconn);
-  insert_person_table(dbconn, "Jim", "1965-02-10");
+  insert_person_table(dbconn, "John", "1980-04-03");
   show_person_table(dbconn);
   resp = select_person_byId(dbconn, 1);
   printf("Person name: %s d-o-b: %s\n", resp.first_name, resp.date_of_birth);
+  show_person_dups(dbconn);
+  delete_person_dups(dbconn);
+  show_person_table(dbconn);
   exit_clean(dbconn);
   return 0;
 }
