@@ -3,10 +3,11 @@
 #define _TESTPSQL_H
 
 #include <stdio.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include <libpq-fe.h>
+#include <postgresql/libpq-fe.h>
 
 #define CONNINFO "dbname = postgres host = localhost port = 5432 user = skline"
 #define BUFFER_SIZE 1024
